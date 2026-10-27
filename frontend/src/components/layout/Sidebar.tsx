@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { NavLink, useLocation } from 'react-router-dom';
 import {
   LayoutDashboard,
@@ -15,8 +15,10 @@ import {
   ChevronLeft,
   ChevronRight,
   Sparkles,
-  ShieldCheck
+  ShieldCheck,
+  CheckCircle2
 } from 'lucide-react';
+import { api } from '../../services/api';
 
 interface SidebarProps {
   collapsed: boolean;
@@ -25,6 +27,19 @@ interface SidebarProps {
 
 export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
   const location = useLocation();
+  const [githubUser, setGithubUser] = useState<string | null>(null);
+
+  useEffect(() => {
+    let isMounted = true;
+    api.getCurrentUser()
+      .then(user => {
+        if (isMounted && user?.github_connection?.is_connected) {
+          setGithubUser(user.github_connection.github_username || 'connected');
+        }
+      })
+      .catch(() => {});
+    return () => { isMounted = false; };
+  }, []);
 
   const navItems = [
     { label: 'Overview', path: '/dashboard', icon: LayoutDashboard },
@@ -73,19 +88,33 @@ export const Sidebar: React.FC<SidebarProps> = ({ collapsed, onToggle }) => {
           </button>
         </div>
 
-        {/* Demo Mode Badge */}
+        {/* Dynamic Mode Badge */}
         {!collapsed && (
-          <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
-            <ShieldCheck className="w-4 h-4 text-amber-500 flex-shrink-0" />
-            <div className="text-[11px] leading-tight">
-              <span className="font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
-                Demo Mode Active
-              </span>
-              <span className="text-slate-500 dark:text-slate-400 text-[10px]">
-                Safe sandboxed execution
-              </span>
+          githubUser ? (
+            <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-500/20 flex items-center gap-2">
+              <CheckCircle2 className="w-4 h-4 text-emerald-500 flex-shrink-0" />
+              <div className="text-[11px] leading-tight">
+                <span className="font-semibold text-emerald-600 dark:text-emerald-400 uppercase tracking-wider block">
+                  GitHub Connected
+                </span>
+                <span className="text-slate-500 dark:text-slate-400 text-[10px] truncate max-w-[150px] block">
+                  @{githubUser}
+                </span>
+              </div>
             </div>
-          </div>
+          ) : (
+            <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-500/20 flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-amber-500 flex-shrink-0" />
+              <div className="text-[11px] leading-tight">
+                <span className="font-semibold text-amber-600 dark:text-amber-400 uppercase tracking-wider block">
+                  Demo Mode Active
+                </span>
+                <span className="text-slate-500 dark:text-slate-400 text-[10px]">
+                  Safe sandboxed execution
+                </span>
+              </div>
+            </div>
+          )
         )}
 
         {/* Navigation Items */}

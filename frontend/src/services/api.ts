@@ -121,13 +121,14 @@ export const api = {
     return request<AgentRunSummary[]>(`/agent-runs?${params.toString()}`);
   },
   getAgentRun: (id: string) => request<AgentRunDetail>(`/agent-runs/${id}`),
-  createAgentRun: (issueUrl: string, baseBranch?: string, aiProvider?: string) =>
+  createAgentRun: (issueUrl: string, baseBranch?: string, aiProvider?: string, isDemo?: boolean) =>
     request<AgentRunSummary>('/agent-runs', {
       method: 'POST',
       body: JSON.stringify({
         issue_url: issueUrl,
         base_branch: baseBranch,
-        ai_provider: aiProvider
+        ai_provider: aiProvider,
+        is_demo: isDemo
       })
     }),
   approvePatch: (runId: string, approved: boolean, reason?: string) =>

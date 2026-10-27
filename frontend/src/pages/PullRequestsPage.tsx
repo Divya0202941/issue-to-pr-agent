@@ -106,9 +106,15 @@ export const PullRequestsPage: React.FC = () => {
                   <span className="text-[10px] font-bold px-2 py-0.5 rounded-full uppercase bg-emerald-500/10 text-emerald-500 border border-emerald-500/20">
                     {pr.state}
                   </span>
-                  {pr.is_demo && (
-                    <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full">
-                      DEMO MODE
+                  {pr.is_demo ? (
+                    <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <AlertCircle className="w-3 h-3" />
+                      SIMULATED DEMO PR
+                    </span>
+                  ) : (
+                    <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full flex items-center gap-1">
+                      <CheckCircle className="w-3 h-3" />
+                      LIVE GITHUB PR
                     </span>
                   )}
                 </div>
@@ -152,25 +158,43 @@ export const PullRequestsPage: React.FC = () => {
                 </Link>
 
                 <div className="flex items-center gap-2">
-                  {pr.html_url && (
-                    <>
-                      <button
-                        onClick={() => handleCopyUrl(pr.id, pr.html_url)}
-                        className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5"
-                      >
-                        {copiedId === pr.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
-                        <span>Copy URL</span>
-                      </button>
+                  {pr.is_demo ? (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-amber-600 dark:text-amber-400 font-medium px-3 py-1.5 rounded-xl bg-amber-500/10 border border-amber-500/20">
+                        Offline Simulation (No GitHub PR Created)
+                      </span>
+                      {pr.html_url && (
+                        <button
+                          onClick={() => handleCopyUrl(pr.id, pr.html_url)}
+                          className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5 text-slate-500"
+                          title="Copy simulated PR link"
+                        >
+                          {copiedId === pr.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                          <span>Copy Demo Link</span>
+                        </button>
+                      )}
+                    </div>
+                  ) : (
+                    pr.html_url && (
+                      <>
+                        <button
+                          onClick={() => handleCopyUrl(pr.id, pr.html_url)}
+                          className="px-3 py-1.5 rounded-xl border border-slate-200 dark:border-slate-800 text-xs font-semibold hover:bg-slate-50 dark:hover:bg-slate-800 transition flex items-center gap-1.5"
+                        >
+                          {copiedId === pr.id ? <Check className="w-3.5 h-3.5 text-emerald-500" /> : <Copy className="w-3.5 h-3.5 text-slate-400" />}
+                          <span>Copy URL</span>
+                        </button>
 
-                      <a
-                        href={pr.html_url}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 shadow-sm transition"
-                      >
-                        Open on GitHub <ExternalLink className="w-3.5 h-3.5" />
-                      </a>
-                    </>
+                        <a
+                          href={pr.html_url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-4 py-1.5 rounded-xl text-xs font-bold bg-indigo-600 hover:bg-indigo-500 text-white flex items-center gap-1.5 shadow-sm transition"
+                        >
+                          Open on GitHub <ExternalLink className="w-3.5 h-3.5" />
+                        </a>
+                      </>
+                    )
                   )}
                 </div>
               </div>

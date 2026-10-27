@@ -45,7 +45,7 @@ async def fetch_issue(payload: IssueValidationRequest, db: Session = Depends(get
             full_name=full_name,
             default_branch="main",
             html_url=f"https://github.com/{full_name}",
-            is_demo=True
+            is_demo=(owner == "acme-corp")
         )
         db.add(repository)
         db.commit()

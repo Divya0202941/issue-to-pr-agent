@@ -77,6 +77,7 @@ export const IssueIntakePage: React.FC = () => {
   const [submitting, setSubmitting] = useState(false);
   const [activeScenarioId, setActiveScenarioId] = useState<string>('validation-empty-input');
   const [scenarioLoadedFeedback, setScenarioLoadedFeedback] = useState(false);
+  const [isDemoMode, setIsDemoMode] = useState<boolean>(true);
 
   // Validate an issue URL and fetch its preview
   const handleValidateUrl = useCallback(async (urlToValidate: string) => {
@@ -90,6 +91,13 @@ export const IssueIntakePage: React.FC = () => {
       if (res.is_valid && res.owner && res.repo) {
         const matchingFullName = `${res.owner}/${res.repo}`;
         setSelectedRepo(matchingFullName);
+        
+        // Auto-switch mode based on owner: acme-corp is demo; real repos default to Live GitHub mode
+        if (res.owner === 'acme-corp') {
+          setIsDemoMode(true);
+        } else {
+          setIsDemoMode(false);
+        }
 
         try {
           const issueData = await api.fetchIssue(cleanUrl);
@@ -174,6 +182,7 @@ export const IssueIntakePage: React.FC = () => {
     setIssueUrl(scenario.url);
     setSelectedRepo(scenario.repo);
     setBaseBranch(scenario.baseBranch);
+    setIsDemoMode(true);
     setScenarioLoadedFeedback(true);
 
     // Run validation immediately
@@ -193,10 +202,12 @@ export const IssueIntakePage: React.FC = () => {
       setIssueUrl(matchingScenario.url);
       setBaseBranch(matchingScenario.baseBranch);
       setActiveScenarioId(matchingScenario.id);
+      setIsDemoMode(true);
       handleValidateUrl(matchingScenario.url);
     } else {
       const customUrl = `https://github.com/${repoFullName}/issues/1`;
       setIssueUrl(customUrl);
+      setIsDemoMode(false);
       handleValidateUrl(customUrl);
     }
   };
@@ -217,7 +228,7 @@ export const IssueIntakePage: React.FC = () => {
 
     try {
       setSubmitting(true);
-      const run = await api.createAgentRun(issueUrl.trim(), baseBranch.trim());
+      const run = await api.createAgentRun(issueUrl.trim(), baseBranch.trim(), undefined, isDemoMode);
       navigate(`/agent-runs/${run.id}`);
     } catch (err: any) {
       alert(err.message || 'Failed to start agent run');
@@ -234,9 +245,15 @@ export const IssueIntakePage: React.FC = () => {
           <span className="text-[11px] font-bold uppercase tracking-wider text-indigo-500 bg-indigo-500/10 px-2.5 py-0.5 rounded-full border border-indigo-500/20">
             Intake Phase
           </span>
-          <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
-            Zero-Token Demo Mode
-          </span>
+          {isDemoMode ? (
+            <span className="text-[11px] font-bold text-amber-500 bg-amber-500/10 px-2 py-0.5 rounded-full border border-amber-500/20">
+              Zero-Token Demo Simulation
+            </span>
+          ) : (
+            <span className="text-[11px] font-bold text-emerald-500 bg-emerald-500/10 px-2 py-0.5 rounded-full border border-emerald-500/20">
+              Live GitHub Integration
+            </span>
+          )}
         </div>
         <h2 className="text-xl font-bold text-slate-900 dark:text-white">
           GitHub Issue Intake & Triage
@@ -434,6 +451,39 @@ export const IssueIntakePage: React.FC = () => {
                 className="w-full rounded-xl bg-slate-50 dark:bg-[#0B0F17] border border-slate-200 dark:border-slate-800 px-3 py-2 text-xs text-slate-900 dark:text-white font-mono focus:outline-none focus:border-indigo-500"
               />
             </div>
+          </div>
+
+          {/* Execution Mode Selector Card */}
+          <div className="p-4 rounded-xl bg-slate-50 dark:bg-[#0B0F17] border border-slate-200 dark:border-slate-800 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs">
+            <div className="space-y-1">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-slate-800 dark:text-slate-200">Execution Mode:</span>
+                {isDemoMode ? (
+                  <span className="text-[10px] font-bold text-amber-500 bg-amber-500/10 border border-amber-500/20 px-2 py-0.5 rounded-full uppercase">
+                    Zero-Token Demo Simulation
+                  </span>
+                ) : (
+                  <span className="text-[10px] font-bold text-emerald-500 bg-emerald-500/10 border border-emerald-500/20 px-2 py-0.5 rounded-full uppercase">
+                    Live GitHub Mode (Real PR)
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-slate-500 dark:text-slate-400">
+                {isDemoMode
+                  ? 'Simulates patch generation and Pull Request creation safely offline without creating branches on GitHub.'
+                  : 'Uses your configured GitHub Personal Access Token to commit the patch and open a genuine Pull Request on GitHub.'}
+              </p>
+            </div>
+
+            <label className="flex items-center gap-2 cursor-pointer text-slate-700 dark:text-slate-300 select-none flex-shrink-0 font-medium">
+              <input
+                type="checkbox"
+                checked={isDemoMode}
+                onChange={e => setIsDemoMode(e.target.checked)}
+                className="rounded border-slate-300 dark:border-slate-700 text-indigo-600 focus:ring-indigo-500 w-4 h-4 cursor-pointer"
+              />
+              <span className="text-xs">Run as Offline Demo</span>
+            </label>
           </div>
 
           {/* Action Row */}

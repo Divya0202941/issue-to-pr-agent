@@ -13,6 +13,7 @@ from app.schemas import (
 from app.agents.orchestrator import orchestrator
 from app.core.security import parse_and_validate_github_issue_url
 from app.services.audit_service import audit_service
+from app.services.github_service import github_service
 
 router = APIRouter()
 
@@ -34,6 +35,18 @@ async def create_agent_run(
         raise HTTPException(status_code=400, detail=error)
         
     full_name = f"{owner}/{repo_name}"
+    
+    # Resolve demo mode:
+    # If explicitly passed in payload, use it.
+    # If owner is acme-corp, it is a demo scenario.
+    # Otherwise, if GitHub token is present, it's a live GitHub run (is_demo=False).
+    if payload.is_demo is not None:
+        run_is_demo = payload.is_demo
+    elif owner == "acme-corp":
+        run_is_demo = True
+    else:
+        run_is_demo = not bool(github_service.token)
+
     repo = db.query(Repository).filter(Repository.full_name == full_name).first()
     if not repo:
         repo = Repository(
@@ -42,11 +55,14 @@ async def create_agent_run(
             full_name=full_name,
             default_branch=payload.base_branch or "main",
             html_url=f"https://github.com/{full_name}",
-            is_demo=payload.is_demo if payload.is_demo is not None else True
+            is_demo=run_is_demo
         )
         db.add(repo)
         db.commit()
         db.refresh(repo)
+    elif payload.is_demo is not None:
+        repo.is_demo = run_is_demo
+        db.commit()
         
     issue = (
         db.query(IssueRecord)
@@ -54,14 +70,25 @@ async def create_agent_run(
         .first()
     )
     if not issue:
+        # Try fetching real issue title if token available and not demo
+        issue_title = f"Resolve GitHub issue #{issue_number}"
+        issue_body = "Task generated from GitHub issue URL."
+        if not run_is_demo and github_service.token:
+            try:
+                gh_issue = await github_service.get_issue(owner, repo_name, issue_number)
+                issue_title = gh_issue.get("title", issue_title)
+                issue_body = gh_issue.get("body", issue_body)
+            except Exception:
+                pass
+
         issue = IssueRecord(
             repository_id=repo.id,
             issue_number=issue_number,
-            title=f"Resolve GitHub issue #{issue_number}",
-            body="Task generated from GitHub issue URL.",
+            title=issue_title,
+            body=issue_body,
             state="open",
             html_url=payload.issue_url,
-            is_demo=repo.is_demo
+            is_demo=run_is_demo
         )
         db.add(issue)
         db.commit()
@@ -80,7 +107,7 @@ async def create_agent_run(
         correction_attempt=0,
         max_correction_attempts=3,
         confidence_score=0.9,
-        is_demo=repo.is_demo,
+        is_demo=run_is_demo,
         created_at=datetime.utcnow()
     )
     db.add(agent_run)

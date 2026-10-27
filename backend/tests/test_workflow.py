@@ -104,7 +104,15 @@ async def test_six_agents_individual_execution():
         assert "confidence_score" in review_res
         context["review_result"] = review_res
 
-        # 6. PR Agent
+        # 6. PR Agent - verify human approval gate is strictly enforced
+        with pytest.raises(ValueError, match="Human patch approval has not been granted"):
+            await pr_agent.execute(run, db, context)
+
+        # Grant human patch approval
+        patch.is_approved = True
+        db.commit()
+
+        # Now PR Agent should execute successfully
         pr_res = await pr_agent.execute(run, db, context)
         assert "title" in pr_res
         assert "html_url" in pr_res
