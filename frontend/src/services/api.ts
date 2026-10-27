@@ -3,7 +3,36 @@ import {
   PullRequest, NotificationItem, AuditEventItem, AnalyticsData
 } from '../types';
 
-export const API_BASE = (import.meta as any).env?.VITE_API_URL || 'http://localhost:8000/api/v1';
+// Configurable backend URL with robust production fallback
+const PROD_BACKEND_URL = 'https://issue-to-pr-agent-3.onrender.com/api/v1';
+const DEV_BACKEND_URL = 'http://localhost:8000/api/v1';
+
+// Read VITE_API_URL from Vite environment variables (if provided at build time)
+const envApiUrl: string | undefined = (import.meta as any).env?.VITE_API_URL;
+
+// Detect whether running in production mode (Vite build PROD flag or non-localhost hostname)
+const isBrowser = typeof window !== 'undefined';
+const isLocalhost = isBrowser && (
+  window.location.hostname === 'localhost' ||
+  window.location.hostname === '127.0.0.1' ||
+  window.location.hostname === '0.0.0.0'
+);
+const isProduction = Boolean((import.meta as any).env?.PROD) || (isBrowser && !isLocalhost);
+
+function resolveBaseUrl(): string {
+  let base = envApiUrl;
+  if (!base || base.trim() === '') {
+    base = isProduction ? PROD_BACKEND_URL : DEV_BACKEND_URL;
+  }
+  
+  base = base.trim().replace(/\/+$/, '');
+  if (!base.endsWith('/api/v1')) {
+    base = `${base}/api/v1`;
+  }
+  return base;
+}
+
+export const API_BASE = resolveBaseUrl();
 
 export const getEventSourceUrl = (runId: string) => `${API_BASE}/agent-runs/${runId}/events`;
 
@@ -14,16 +43,25 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     ...(options.headers || {})
   };
 
-  const response = await fetch(url, { ...options, headers });
-  if (!response.ok) {
-    let errorDetail = `Request failed with status ${response.status}`;
-    try {
-      const errJson = await response.json();
-      if (errJson.detail) errorDetail = errJson.detail;
-    } catch (_) {}
-    throw new Error(errorDetail);
+  try {
+    const response = await fetch(url, { ...options, headers });
+    if (!response.ok) {
+      let errorDetail = `Request failed with status ${response.status}`;
+      try {
+        const errJson = await response.json();
+        if (errJson.detail) errorDetail = errJson.detail;
+      } catch (_) {}
+      throw new Error(errorDetail);
+    }
+    return response.json();
+  } catch (err: any) {
+    if (err instanceof TypeError && err.message?.toLowerCase().includes('fetch')) {
+      throw new Error(
+        `Unable to reach backend (${API_BASE}). If the server on Render is waking from sleep, please allow ~30s and retry.`
+      );
+    }
+    throw err;
   }
-  return response.json();
 }
 
 export const api = {

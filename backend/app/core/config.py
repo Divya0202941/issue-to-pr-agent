@@ -21,14 +21,16 @@ class Settings(BaseModel):
     # Security
     SECRET_KEY: str = Field(default_factory=lambda: os.getenv("SECRET_KEY", "development_secret_key_change_in_production_32_chars_min"))
     ACCESS_TOKEN_EXPIRE_MINUTES: int = 60 * 24 * 7  # 7 days
-    CORS_ORIGINS: List[str] = [
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:8000",
-        "http://127.0.0.1:8000"
-    ]
+    CORS_ORIGINS: List[str] = Field(
+        default_factory=lambda: [
+            origin.strip()
+            for origin in os.getenv(
+                "CORS_ORIGINS",
+                "https://issue-to-pr-agent.vercel.app,http://localhost:5173,http://127.0.0.1:5173,http://localhost:3000,http://127.0.0.1:3000,http://localhost:8000,http://127.0.0.1:8000"
+            ).split(",")
+            if origin.strip()
+        ]
+    )
     
     # GitHub Integration
     GITHUB_TOKEN: Optional[str] = Field(default_factory=lambda: os.getenv("GITHUB_TOKEN"))
