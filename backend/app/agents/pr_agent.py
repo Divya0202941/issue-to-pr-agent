@@ -59,10 +59,13 @@ class PRAgent(BaseAgent):
             if not token:
                 error_msg = (
                     "GitHub Personal Access Token is required to open a real Pull Request. "
-                    "Configure GITHUB_TOKEN environment variable or connect your account in Settings."
+                    "Please configure GITHUB_TOKEN environment variable in Render or update token in Settings."
                 )
                 self.log(db, agent_run.id, f"ERROR: {error_msg}", level="ERROR")
                 raise PermissionError(error_msg)
+
+            token_type = "Fine-grained PAT (github_pat_...)" if token.startswith("github_pat_") else ("Classic PAT (ghp_...)" if token.startswith("ghp_") else "Personal Access Token")
+            self.log(db, agent_run.id, f"Detected configured GitHub {token_type}.")
 
             # A. Verify access to target repository
             self.log(db, agent_run.id, f"Verifying access to GitHub repository '{repo.full_name}'...")

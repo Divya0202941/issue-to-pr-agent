@@ -33,7 +33,13 @@ class Settings(BaseModel):
     )
     
     # GitHub Integration
-    GITHUB_TOKEN: Optional[str] = Field(default_factory=lambda: os.getenv("GITHUB_TOKEN"))
+    GITHUB_TOKEN: Optional[str] = Field(
+        default_factory=lambda: (
+            os.getenv("GITHUB_TOKEN") or
+            os.getenv("GH_TOKEN") or
+            os.getenv("GITHUB_PAT")
+        )
+    )
     GITHUB_CLIENT_ID: Optional[str] = Field(default_factory=lambda: os.getenv("GITHUB_CLIENT_ID"))
     GITHUB_CLIENT_SECRET: Optional[str] = Field(default_factory=lambda: os.getenv("GITHUB_CLIENT_SECRET"))
     GITHUB_API_BASE: str = "https://api.github.com"
